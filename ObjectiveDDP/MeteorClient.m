@@ -514,7 +514,7 @@ double const MeteorClientMaxRetryIncrease = 6;
         tokenType = @"code";
     }
     
-    return [NSString stringWithFormat: @"%@/_oauth/%@/?%@=%@&state=%@&installedClient=true", homeUrl, serviceName, tokenType, accessToken, [self _generateStateWithToken: [self _randomSecret]]];
+    return [NSString stringWithFormat: @"%@/_oauth/%@?%@=%@&state=%@&installedClient=true", homeUrl, serviceName, tokenType, accessToken, [self _generateStateWithToken: [self _randomSecret]]];
 }
 
 - (NSDictionary *)_buildUserParametersWithOAuthAccessToken:(NSString *)accessToken
