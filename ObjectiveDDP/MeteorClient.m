@@ -160,7 +160,7 @@ double const MeteorClientMaxRetryIncrease = 6;
     NSLog(@"%@", url);
     //callback gives an html page in string. credential token & credential secret are stored in a hidden element
     NSString *callback = [self _makeHTTPRequestAtUrl:url];
-    
+
     NSDictionary *jsonData = [self handleOAuthCallback:callback];
 
     // setCredentialToken gets set to false if the call fails
@@ -171,9 +171,9 @@ double const MeteorClientMaxRetryIncrease = 6;
         }
         return;
     }
-    
+
     NSDictionary* options = @{key: @{@"credentialToken": [jsonData objectForKey: @"credentialToken"], @"credentialSecret": [jsonData objectForKey:@"credentialSecret"]}};
-    
+
     [self logonWithUserParameters:options responseCallback:responseCallback];
 }
 
@@ -186,15 +186,15 @@ double const MeteorClientMaxRetryIncrease = 6;
         }
         return;
     }
-    
+
     if ([self _rejectIfNotConnected:responseCallback]) {
         return;
     }
 
     [self _setAuthStateToLoggingIn];
     NSMutableDictionary *mutableUserParameters = [userParameters mutableCopy];
-    
-    
+
+
     [self callMethodName:@"login" parameters:@[mutableUserParameters] responseCallback:^(NSDictionary *response, NSError *error) {
 
         if (error) {
@@ -207,7 +207,7 @@ double const MeteorClientMaxRetryIncrease = 6;
         }
         responseCallback(response, error);
     }];
-    
+
 }
 
 - (void)signupWithUsernameAndEmail:(NSString *)username email:(NSString *)email password:(NSString *)password fullname:(NSString *)fullname responseCallback:(MeteorClientMethodCallback)responseCallback {
@@ -237,10 +237,10 @@ double const MeteorClientMaxRetryIncrease = 6;
         return;
     }
     [self _setAuthStateToLoggingIn];
-    
-	
+
+
     NSMutableDictionary *mutableUserParameters = [userParameters mutableCopy];
-    
+
     [self callMethodName:@"createUser" parameters:@[mutableUserParameters] responseCallback:^(NSDictionary *response, NSError *error) {
         if (error) {
             [self _setAuthStatetoLoggedOut];
@@ -258,17 +258,17 @@ double const MeteorClientMaxRetryIncrease = 6;
 - (NSString *)sha256:(NSString *)clear {
     const char *s = [clear cStringUsingEncoding:NSUTF8StringEncoding];
     NSData *keyData = [NSData dataWithBytes:s length:strlen(s)];
-    
+
     uint8_t digest[CC_SHA256_DIGEST_LENGTH] = {0};
     CC_SHA256(keyData.bytes, (unsigned int)keyData.length, digest);
     NSData *digestData = [NSData dataWithBytes:digest length:CC_SHA256_DIGEST_LENGTH];
     NSString *hash = [digestData description];
-    
+
     // refactor this
     hash = [hash stringByReplacingOccurrencesOfString:@" " withString:@""];
     hash = [hash stringByReplacingOccurrencesOfString:@"<" withString:@""];
     hash = [hash stringByReplacingOccurrencesOfString:@">" withString:@""];
-    
+
     return hash;
 }
 
@@ -302,11 +302,11 @@ double const MeteorClientMaxRetryIncrease = 6;
 
 - (void)didReceiveMessage:(NSDictionary *)message {
     NSString *msg = [message objectForKey:@"msg"];
-    
+
     if (!msg) return;
-    
+
     NSString *messageId = message[@"id"];
-    
+
     [self _handleMethodResultMessageWithMessageId:messageId message:message msg:msg];
     [self _handleAddedMessage:message msg:msg];
     [self _handleAddedBeforeMessage:message msg:msg];
@@ -317,7 +317,7 @@ double const MeteorClientMaxRetryIncrease = 6;
     if ([msg isEqualToString:@"ping"]) {
         [self.ddp pong:messageId];
     }
-    
+
     if ([msg isEqualToString:@"connected"]) {
         self.connected = YES;
         [[NSNotificationCenter defaultCenter] postNotificationName:MeteorClientConnectionReadyNotification object:self];
@@ -326,7 +326,7 @@ double const MeteorClientMaxRetryIncrease = 6;
         }
         [self _makeMeteorDataSubscriptions];
     }
-    
+
     if ([msg isEqualToString:@"ready"]) {
         NSArray *subs = message[@"subs"];
         for(NSString *readySubscription in subs) {
@@ -340,7 +340,7 @@ double const MeteorClientMaxRetryIncrease = 6;
             }
         }
     }
-    
+
     else if ([msg isEqualToString:@"updated"]) {
         NSArray *methods = message[@"methods"];
         for(NSString *updateMethod in methods) {
@@ -353,21 +353,21 @@ double const MeteorClientMaxRetryIncrease = 6;
             }
         }
     }
-    
+
     else if ([msg isEqualToString:@"addedBefore"]) {
-        
+
     }
-    
+
     else if ([msg isEqualToString:@"movedBefore"]) {
-        
+
     }
-    
+
     else if ([msg isEqualToString:@"nosub"]) {
-        
+
     }
-    
+
     else if ([msg isEqualToString:@"error"]) {
-        
+
     }
 }
 
@@ -415,7 +415,7 @@ double const MeteorClientMaxRetryIncrease = 6;
     }
 //
     double timeInterval = 5.0 * _tries;
-    
+
     if (_tries != _maxRetryIncrement) {
         _tries++;
     }
@@ -516,7 +516,7 @@ double const MeteorClientMaxRetryIncrease = 6;
     } else {
         homeUrl = [@"https" stringByAppendingString:[homeUrl substringFromIndex:[@"wss" length]]];
     }
-    
+
     NSString* tokenType = @"";
     //facebook sdk can only send access token, others send a one time code
     if ([serviceName isEqualToString: @"facebook"]) {
@@ -524,7 +524,7 @@ double const MeteorClientMaxRetryIncrease = 6;
     } else {
         tokenType = @"code";
     }
-    
+
     return [NSString stringWithFormat: @"%@/_oauth/%@?%@=%@&state=%@&installedClient=true", homeUrl, serviceName, tokenType, accessToken, [self _generateStateWithToken: [self _randomSecret]]];
 }
 
@@ -546,7 +546,7 @@ double const MeteorClientMaxRetryIncrease = 6;
     NSString* base64String = [jsonData base64EncodedStringWithOptions: NSDataBase64EncodingEndLineWithLineFeed];
     NSLog(@"%@", base64String);
     return base64String;
-    
+
 }
 
 //generates random secret for credential token
@@ -565,19 +565,19 @@ double const MeteorClientMaxRetryIncrease = 6;
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
     [request setHTTPMethod:@"GET"];
     [request setURL:[NSURL URLWithString:url]];
-    
+
     NSLog(@"Url is %@", url);
-    
+
     NSError *error = [[NSError alloc] init];
     NSHTTPURLResponse *responseCode = nil;
-    
+
     NSData *oResponseData = [NSURLConnection sendSynchronousRequest:request returningResponse:&responseCode error:&error];
-    
+
     if([responseCode statusCode] != 200){
         NSLog(@"Error getting %@, HTTP status code %li", url, (long)[responseCode statusCode]);
         return nil;
     }
-    
+
     return [[NSString alloc] initWithData:oResponseData encoding:NSUTF8StringEncoding];
 }
 
@@ -588,9 +588,9 @@ double const MeteorClientMaxRetryIncrease = 6;
     }
     NSRegularExpression* regex = [NSRegularExpression regularExpressionWithPattern:@"<div id=\"config\" style=\"display:none;\">(.*?)</div>" options:0 error:nil];
     callback = [callback substringWithRange:[[regex firstMatchInString:callback options:0 range:NSMakeRange(0, [callback length])] rangeAtIndex: 1]];
-    
+
     NSLog(@"callback is: %@", callback);
-    
+
     NSDictionary* jsonData = [NSJSONSerialization JSONObjectWithData:[callback dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
     return jsonData;
 }
