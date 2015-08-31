@@ -32,6 +32,7 @@ typedef void(^MeteorClientMethodCallback)(NSDictionary *response, NSError *error
 @property (nonatomic, strong) ObjectiveDDP *ddp;
 @property (nonatomic, weak) id<DDPAuthDelegate> authDelegate;
 @property (nonatomic, strong, readonly) NSMutableDictionary *collections;
+@property (nonatomic) Boolean storeCollectionsInMemory;
 @property (nonatomic, copy, readonly) NSString *userId;
 @property (nonatomic, copy, readonly) NSString *sessionToken;
 @property (nonatomic, assign, readonly) BOOL websocketReady;
@@ -44,6 +45,7 @@ typedef void(^MeteorClientMethodCallback)(NSDictionary *response, NSError *error
 //          use "pre2" for meteor versions v0.8.1.1 and above (until they change it again)
 //          use "1" for meteor versions v0.8.9 and above
 - (id)initWithDDPVersion:(NSString *)ddpVersion;
+- (id)initWithDDPVersion:(NSString *)ddpVersion usingInMemoryCollections:(BOOL)useInMemoryCollections;
 
 #pragma mark - Methods
 

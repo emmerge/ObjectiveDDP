@@ -26,9 +26,17 @@ double const MeteorClientMaxRetryIncrease = 6;
 }
 
 - (id)initWithDDPVersion:(NSString *)ddpVersion {
+    return ([self initWithDDPVersion:ddpVersion usingInMemoryCollections:YES]);
+}
+
+- (id)initWithDDPVersion:(NSString *)ddpVersion usingInMemoryCollections:(BOOL)useInMemoryCollections
+{
     self = [super init];
     if (self) {
-        _collections = [NSMutableDictionary dictionary];
+        _storeCollectionsInMemory = useInMemoryCollections;
+        if (_storeCollectionsInMemory) {
+            _collections = [NSMutableDictionary dictionary];
+        }
         _subscriptions = [NSMutableDictionary dictionary];
         _subscriptionsParameters = [NSMutableDictionary dictionary];
         _methodIds = [NSMutableSet set];
@@ -48,7 +56,9 @@ double const MeteorClientMaxRetryIncrease = 6;
 #pragma mark MeteorClient public API
 
 - (void)resetCollections {
-    [self.collections removeAllObjects];
+    if (_storeCollectionsInMemory) {
+        [self.collections removeAllObjects];
+    }
 }
 
 - (void)sendWithMethodName:(NSString *)methodName parameters:(NSArray *)parameters {
