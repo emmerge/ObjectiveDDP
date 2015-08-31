@@ -66,30 +66,33 @@
     
     NSMutableDictionary *object = [NSMutableDictionary dictionaryWithDictionary:@{@"_id": message[@"id"]}];
     
-    M13MutableOrderedDictionary *collection = self.collections[message[@"collection"]];
-    
-    NSString * beforeDocumentId = [message valueForKey:@"before"];
-    
-    //if document doesn't exist, add it to end
-    if (!beforeDocumentId) {
-        [collection addObject:object pairedWithKey:message[@"id"]];
-    }
-    //move document to before index
-    else{
+    if (self.storeCollectionsInMemory) {
+        M13MutableOrderedDictionary *collection = self.collections[message[@"collection"]];
+        
+        NSString * beforeDocumentId = [message valueForKey:@"before"];
+        
+        //if document doesn't exist, add it to end
+        if (!beforeDocumentId) {
+            [collection addObject:object pairedWithKey:message[@"id"]];
+        }
+        //move document to before index
+        else{
 
-        NSUInteger currentIndex = [collection indexOfKey:message[@"id"]];
-        NSUInteger moveToIndex = [collection indexOfKey:beforeDocumentId];
+            NSUInteger currentIndex = [collection indexOfKey:message[@"id"]];
+            NSUInteger moveToIndex = [collection indexOfKey:beforeDocumentId];
 
-        if (currentIndex != NSNotFound && moveToIndex != NSNotFound) {
-            
-            //remove object from its current place
-            object = [collection objectForKey:message[@"id"]];
-            [collection removeObjectForKey:message[@"id"]];
-            
-            //insert object at before index
-            [collection insertObject:object pairedWithKey:message[@"id"] atIndex:moveToIndex];
+            if (currentIndex != NSNotFound && moveToIndex != NSNotFound) {
+                
+                //remove object from its current place
+                object = [collection objectForKey:message[@"id"]];
+                [collection removeObjectForKey:message[@"id"]];
+                
+                //insert object at before index
+                [collection insertObject:object pairedWithKey:message[@"id"] atIndex:moveToIndex];
+            }
         }
     }
+    
     return object;
 }
 
@@ -122,11 +125,13 @@
     for (id key in message[@"fields"]) {
         object[key] = message[@"fields"][key];
     }
-    if (!self.collections[message[@"collection"]]) {
-        self.collections[message[@"collection"]] = [M13MutableOrderedDictionary new];
+    if (self.storeCollectionsInMemory) {
+        if (!self.collections[message[@"collection"]]) {
+            self.collections[message[@"collection"]] = [M13MutableOrderedDictionary new];
+        }
+        M13MutableOrderedDictionary *collection = self.collections[message[@"collection"]];
+        [collection addObject:object pairedWithKey:message[@"id"]];
     }
-    M13MutableOrderedDictionary *collection = self.collections[message[@"collection"]];
-    [collection addObject:object pairedWithKey:message[@"id"]];
     return object;
 }
 
@@ -138,18 +143,20 @@
         object[key] = message[@"fields"][key];
     }
 
-    M13MutableOrderedDictionary *collection = self.collections[message[@"collection"]];
-    
-    //if documentId, insert at beforeId index
-    if (documentId) {
-        NSUInteger documentIndex = [collection indexOfKey:documentId]; // _indexForDocumentId:documentId inCollection:collection];
-        if (documentIndex != NSNotFound) {
-            [collection insertObject:object pairedWithKey:message[@"id"] atIndex:documentIndex];
+    if (self.storeCollectionsInMemory) {
+        M13MutableOrderedDictionary *collection = self.collections[message[@"collection"]];
+        
+        //if documentId, insert at beforeId index
+        if (documentId) {
+            NSUInteger documentIndex = [collection indexOfKey:documentId]; // _indexForDocumentId:documentId inCollection:collection];
+            if (documentIndex != NSNotFound) {
+                [collection insertObject:object pairedWithKey:message[@"id"] atIndex:documentIndex];
+            }
         }
-    }
-    //if no documentId, insert at end
-    else{
-        [collection addObject:object pairedWithKey:message[@"id"]];
+        //if no documentId, insert at end
+        else{
+            [collection addObject:object pairedWithKey:message[@"id"]];
+        }
     }
     return object;
 }
@@ -169,8 +176,10 @@
 
 
 - (void)_parseRemoved:(NSDictionary *)message {
-    M13MutableOrderedDictionary *collection = self.collections[message[@"collection"]];
-    [collection removeObjectForKey:message[@"id"]];
+    if (self.storeCollectionsInMemory) {
+        M13MutableOrderedDictionary *collection = self.collections[message[@"collection"]];
+        [collection removeObjectForKey:message[@"id"]];
+    }
 }
 
 
@@ -188,15 +197,19 @@
 
 
 - (NSDictionary *)_parseObjectAndUpdateCollection:(NSDictionary *)message {
-    M13MutableOrderedDictionary *collection = self.collections[message[@"collection"]];
-    NSMutableDictionary *object = [collection objectForKey:message[@"id"]];
-    for (id key in message[@"fields"]) {
-        object[key] = message[@"fields"][key];
+    if (self.storeCollectionsInMemory) {
+        M13MutableOrderedDictionary *collection = self.collections[message[@"collection"]];
+        NSMutableDictionary *object = [collection objectForKey:message[@"id"]];
+        for (id key in message[@"fields"]) {
+            object[key] = message[@"fields"][key];
+        }
+        for (id key in message[@"cleared"]) {
+            [object removeObjectForKey:key];
+        }
+        return object;
+    } else {
+        return ([self _parseObjectAndAddToCollection:message]);
     }
-    for (id key in message[@"cleared"]) {
-        [object removeObjectForKey:key];
-    }
-    return object;
 }
 
 @end
