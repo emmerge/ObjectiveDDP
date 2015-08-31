@@ -208,7 +208,9 @@
         }
         return object;
     } else {
-        return ([self _parseObjectAndAddToCollection:message]);
+        NSMutableDictionary *object = [NSMutableDictionary dictionaryWithDictionary:message];
+        object[@"_id"] = object[@"id"];
+        return (object);
     }
 }
 
