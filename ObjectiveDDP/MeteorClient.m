@@ -171,7 +171,6 @@ double const MeteorClientMaxRetryIncrease = 6;
 - (NSDictionary *) tradeCodeForSecret:(NSString *)accessToken serviceName:(NSString *)serviceName optionsKey:(NSString *)key {
     //generates random secret (credentialToken)
     NSString *url = [self _buildOAuthRequestStringWithAccessToken:accessToken serviceName: serviceName];
-    NSLog(@"%@", url);
     //callback gives an html page in string. credential token & credential secret are stored in a hidden element
     NSString *callback = [self _makeHTTPRequestAtUrl:url];
     
@@ -591,8 +590,6 @@ double const MeteorClientMaxRetryIncrease = 6;
     [request setHTTPMethod:@"GET"];
     [request setURL:[NSURL URLWithString:url]];
     
-    NSLog(@"Url is %@", url);
-    
     NSError *error = [[NSError alloc] init];
     NSHTTPURLResponse *responseCode = nil;
     
@@ -613,9 +610,7 @@ double const MeteorClientMaxRetryIncrease = 6;
     }
     NSRegularExpression* regex = [NSRegularExpression regularExpressionWithPattern:@"<div id=\"config\" style=\"display:none;\">(.*?)</div>" options:0 error:nil];
     callback = [callback substringWithRange:[[regex firstMatchInString:callback options:0 range:NSMakeRange(0, [callback length])] rangeAtIndex: 1]];
-    
-    NSLog(@"callback is: %@", callback);
-    
+        
     NSDictionary* jsonData = [NSJSONSerialization JSONObjectWithData:[callback dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
     return jsonData;
 }
