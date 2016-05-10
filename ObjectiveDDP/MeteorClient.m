@@ -3,6 +3,7 @@
 #import "MeteorClient.h"
 #import "MeteorClient+Private.h"
 #import "BSONIdGenerator.h"
+#import <SocketRocket/SRWebSocket.h>
 
 NSString * const MeteorClientConnectionReadyNotification = @"bounsj.objectiveddp.ready";
 NSString * const MeteorClientDidConnectNotification = @"boundsj.objectiveddp.connected";
@@ -19,11 +20,6 @@ double const MeteorClientMaxRetryIncrease = 6;
 @end
 
 @implementation MeteorClient
-
-- (id)init {
-    [self doesNotRecognizeSelector:_cmd];
-    return nil;
-}
 
 - (id)initWithDDPVersion:(NSString *)ddpVersion {
     return ([self initWithDDPVersion:ddpVersion usingInMemoryCollections:YES]);
@@ -117,22 +113,12 @@ double const MeteorClientMaxRetryIncrease = 6;
     return YES;
 }
 
+- (void)logonWithSessionToken:(NSString *)sessionToken {
+    [self logonWithSessionToken:sessionToken responseCallback:nil];
+}
 // tokenExpires.$date : expiry date
-- (void) logonWithSessionToken:(NSString *) sessionToken responseCallback:(MeteorClientMethodCallback)responseCallback {
-    self.sessionToken = sessionToken;
-    [self _setAuthStateToLoggingIn];
-    [self callMethodName:@"login" parameters:@[@{@"resume": self.sessionToken}] responseCallback:^(NSDictionary *response, NSError *error) {
-        if (error) {
-            [self _setAuthStatetoLoggedOut];
-            [self.authDelegate authenticationFailedWithError:error];
-        } else {
-            [self _setAuthStateToLoggedIn:response[@"result"][@"id"] withToken:response[@"result"][@"token"]];
-            [self.authDelegate authenticationWasSuccessful];
-        }
-        if (responseCallback) {
-            responseCallback(response, error);
-        }
-    }];
+- (void)logonWithSessionToken:(NSString *) sessionToken responseCallback:(MeteorClientMethodCallback)responseCallback {
+    [self logonWithUserParameters:@{@"resume": sessionToken} responseCallback:responseCallback];
 }
 
 - (void)logonWithUsername:(NSString *)username password:(NSString *)password {
@@ -170,16 +156,8 @@ double const MeteorClientMaxRetryIncrease = 6;
 
 // some meteor servers provide a custom login handler with a custom options key. Allow client to configure the key instead of always using "oauth"
 - (void)logonWithOAuthAccessToken:(NSString *)accessToken serviceName:(NSString *)serviceName optionsKey:(NSString *)key responseCallback:(MeteorClientMethodCallback)responseCallback {
-    //generates random secret (credentialToken)
-    NSString *url = [self _buildOAuthRequestStringWithAccessToken:accessToken serviceName: serviceName];
-    NSLog(@"%@", url);
-    //callback gives an html page in string. credential token & credential secret are stored in a hidden element
-    NSString *callback = [self _makeHTTPRequestAtUrl:url];
-    
-    NSDictionary *jsonData = [self handleOAuthCallback:callback];
-
-    // setCredentialToken gets set to false if the call fails
-    if (jsonData == nil || ![jsonData[@"setCredentialToken"] boolValue]) {
+    NSDictionary* options = [self tradeCodeForSecret:accessToken serviceName:serviceName optionsKey:key];
+    if (!options) {
         NSError *logonError = [NSError errorWithDomain:MeteorClientTransportErrorDomain code:MeteorClientErrorLogonRejected userInfo:@{NSLocalizedDescriptionKey: @"Unable to authenticate"}];
         if (responseCallback) {
             responseCallback(nil, logonError);
@@ -187,9 +165,26 @@ double const MeteorClientMaxRetryIncrease = 6;
         return;
     }
     
+    [self logonWithUserParameters:options responseCallback:responseCallback];
+}
+
+- (NSDictionary *) tradeCodeForSecret:(NSString *)accessToken serviceName:(NSString *)serviceName optionsKey:(NSString *)key {
+    //generates random secret (credentialToken)
+    NSString *url = [self _buildOAuthRequestStringWithAccessToken:accessToken serviceName: serviceName];
+    NSLog(@"%@", url);
+    //callback gives an html page in string. credential token & credential secret are stored in a hidden element
+    NSString *callback = [self _makeHTTPRequestAtUrl:url];
+    
+    NSDictionary *jsonData = [self handleOAuthCallback:callback];
+    
+    // setCredentialToken gets set to false if the call fails
+    if (jsonData == nil || ![jsonData[@"setCredentialToken"] boolValue]) {
+        return nil;
+    }
+    
     NSDictionary* options = @{key: @{@"credentialToken": [jsonData objectForKey: @"credentialToken"], @"credentialSecret": [jsonData objectForKey:@"credentialSecret"]}};
     
-    [self logonWithUserParameters:options responseCallback:responseCallback];
+    return options;
 }
 
 - (void)logonWithUserParameters:(NSDictionary *)userParameters responseCallback:(MeteorClientMethodCallback)responseCallback {
@@ -220,13 +215,21 @@ double const MeteorClientMaxRetryIncrease = 6;
             [self _setAuthStateToLoggedIn:response[@"result"][@"id"] withToken:response[@"result"][@"token"]];
             [self.authDelegate authenticationWasSuccessful];
         }
-        responseCallback(response, error);
+        if (responseCallback) {
+            responseCallback(response, error);
+        }
     }];
     
 }
 
 - (void)signupWithUsernameAndEmail:(NSString *)username email:(NSString *)email password:(NSString *)password fullname:(NSString *)fullname responseCallback:(MeteorClientMethodCallback)responseCallback {
     [self signupWithUserParameters:[self _buildUserParametersSignup:username email:email password:password fullname:fullname] responseCallback:responseCallback];
+}
+
+- (void)signupWithUsernameAndEmail:(NSString *)username email:(NSString *)email password:(NSString *)password userParameters:(NSDictionary *)userParameters responseCallback:(MeteorClientMethodCallback)responseCallback{
+    NSMutableDictionary *parameters = [[self _buildUserParametersSignup:username email:email password:password] mutableCopy];
+    [parameters addEntriesFromDictionary:userParameters];
+    [self signupWithUserParameters:parameters responseCallback:responseCallback];
 }
 
 - (void)signupWithUsername:(NSString *)username password:(NSString *)password fullname:(NSString *)fullname responseCallback:(MeteorClientMethodCallback)responseCallback {
@@ -501,6 +504,13 @@ double const MeteorClientMaxRetryIncrease = 6;
                              @"last_name": lastName,
                              @"signupToken": @""
                              } };
+}
+
+- (NSDictionary *)_buildUserParametersSignup:(NSString *)username email:(NSString *)email password:(NSString *)password
+{
+    return @{ @"username": username,@"email": email,
+              @"password": @{ @"digest": [self sha256:password], @"algorithm": @"sha-256" }
+            };
 }
 
 - (NSDictionary *)_buildUserParametersWithUsername:(NSString *)username password:(NSString *)password

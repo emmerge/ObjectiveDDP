@@ -47,6 +47,10 @@ typedef void(^MeteorClientMethodCallback)(NSDictionary *response, NSError *error
 - (id)initWithDDPVersion:(NSString *)ddpVersion;
 - (id)initWithDDPVersion:(NSString *)ddpVersion usingInMemoryCollections:(BOOL)useInMemoryCollections;
 
+// Prevent user from start with this methods
+- (id)init __attribute__((unavailable("Must use initWithDDPVersion: instead.")));
++ (instancetype)new __attribute__((unavailable("Must use initWithDDPVersion: instead.")));
+
 #pragma mark - Methods
 
 - (void) logonWithSessionToken:(NSString *) sessionToken responseCallback:(MeteorClientMethodCallback)responseCallback;
@@ -56,9 +60,13 @@ typedef void(^MeteorClientMethodCallback)(NSDictionary *response, NSError *error
 - (void)logonWithUsernameOrEmail:(NSString *)usernameOrEmail password:(NSString *)password responseCallback:(MeteorClientMethodCallback)responseCallback;
 - (void)logonWithOAuthAccessToken: (NSString *)accessToken serviceName: (NSString *) serviceName responseCallback: (MeteorClientMethodCallback)responseCallback;
 - (void)logonWithOAuthAccessToken:(NSString *)accessToken serviceName:(NSString *)serviceName optionsKey:(NSString *)key responseCallback:(MeteorClientMethodCallback)responseCallback;
+- (NSDictionary *) tradeCodeForSecret:(NSString *)accessToken serviceName:(NSString *)serviceName optionsKey:(NSString *)key;
 - (void)logonWithUserParameters:(NSDictionary *)userParameters responseCallback:(MeteorClientMethodCallback)responseCallback;
 
 - (void)signupWithUsernameAndEmail:(NSString *)username email:(NSString *)email password:(NSString *)password fullname:(NSString *)fullname responseCallback:(MeteorClientMethodCallback)responseCallback;
+
+- (void)signupWithUsernameAndEmail:(NSString *)username email:(NSString *)email password:(NSString *)password userParameters:(NSDictionary *)userParameters responseCallback:(MeteorClientMethodCallback)responseCallback;
+
 - (void)signupWithUsername:(NSString *)username password:(NSString *)password fullname:(NSString *)fullname responseCallback:(MeteorClientMethodCallback)responseCallback;
 - (void)signupWithEmail:(NSString *)email password:(NSString *)password fullname:(NSString *)fullname responseCallback:(MeteorClientMethodCallback)responseCallback;
 - (void)signupWithEmail:(NSString *)email password:(NSString *)password firstName:(NSString *)firstName lastName:(NSString *)lastName responseCallback:(MeteorClientMethodCallback)responseCallback;
