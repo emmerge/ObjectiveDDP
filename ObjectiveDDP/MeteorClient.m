@@ -146,16 +146,8 @@ double const MeteorClientMaxRetryIncrease = 6;
 
 // some meteor servers provide a custom login handler with a custom options key. Allow client to configure the key instead of always using "oauth"
 - (void)logonWithOAuthAccessToken:(NSString *)accessToken serviceName:(NSString *)serviceName optionsKey:(NSString *)key responseCallback:(MeteorClientMethodCallback)responseCallback {
-    //generates random secret (credentialToken)
-    NSString *url = [self _buildOAuthRequestStringWithAccessToken:accessToken serviceName: serviceName];
-    NSLog(@"%@", url);
-    //callback gives an html page in string. credential token & credential secret are stored in a hidden element
-    NSString *callback = [self _makeHTTPRequestAtUrl:url];
-    
-    NSDictionary *jsonData = [self handleOAuthCallback:callback];
-
-    // setCredentialToken gets set to false if the call fails
-    if (jsonData == nil || ![jsonData[@"setCredentialToken"] boolValue]) {
+    NSDictionary* options = [self tradeCodeForSecret:accessToken serviceName:serviceName optionsKey:key];
+    if (!options) {
         NSError *logonError = [NSError errorWithDomain:MeteorClientTransportErrorDomain code:MeteorClientErrorLogonRejected userInfo:@{NSLocalizedDescriptionKey: @"Unable to authenticate"}];
         if (responseCallback) {
             responseCallback(nil, logonError);
@@ -163,9 +155,26 @@ double const MeteorClientMaxRetryIncrease = 6;
         return;
     }
     
+    [self logonWithUserParameters:options responseCallback:responseCallback];
+}
+
+- (NSDictionary *) tradeCodeForSecret:(NSString *)accessToken serviceName:(NSString *)serviceName optionsKey:(NSString *)key {
+    //generates random secret (credentialToken)
+    NSString *url = [self _buildOAuthRequestStringWithAccessToken:accessToken serviceName: serviceName];
+    NSLog(@"%@", url);
+    //callback gives an html page in string. credential token & credential secret are stored in a hidden element
+    NSString *callback = [self _makeHTTPRequestAtUrl:url];
+    
+    NSDictionary *jsonData = [self handleOAuthCallback:callback];
+    
+    // setCredentialToken gets set to false if the call fails
+    if (jsonData == nil || ![jsonData[@"setCredentialToken"] boolValue]) {
+        return nil;
+    }
+    
     NSDictionary* options = @{key: @{@"credentialToken": [jsonData objectForKey: @"credentialToken"], @"credentialSecret": [jsonData objectForKey:@"credentialSecret"]}};
     
-    [self logonWithUserParameters:options responseCallback:responseCallback];
+    return options;
 }
 
 - (void)logonWithUserParameters:(NSDictionary *)userParameters responseCallback:(MeteorClientMethodCallback)responseCallback {
