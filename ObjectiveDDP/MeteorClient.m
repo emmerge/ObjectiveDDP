@@ -156,7 +156,7 @@ double const MeteorClientMaxRetryIncrease = 6;
 
 // some meteor servers provide a custom login handler with a custom options key. Allow client to configure the key instead of always using "oauth"
 - (void)logonWithOAuthAccessToken:(NSString *)accessToken serviceName:(NSString *)serviceName optionsKey:(NSString *)key responseCallback:(MeteorClientMethodCallback)responseCallback {
-    NSDictionary* options = [self tradeCodeForSecret:accessToken serviceName:serviceName optionsKey:key];
+    NSDictionary* options = [self tradeCodeForSecret:accessToken serviceName:serviceName optionsKey:key withRedirectUri:nil];
     if (!options) {
         NSError *logonError = [NSError errorWithDomain:MeteorClientTransportErrorDomain code:MeteorClientErrorLogonRejected userInfo:@{NSLocalizedDescriptionKey: @"Unable to authenticate"}];
         if (responseCallback) {
@@ -168,9 +168,11 @@ double const MeteorClientMaxRetryIncrease = 6;
     [self logonWithUserParameters:options responseCallback:responseCallback];
 }
 
-- (NSDictionary *) tradeCodeForSecret:(NSString *)accessToken serviceName:(NSString *)serviceName optionsKey:(NSString *)key {
+- (NSDictionary *) tradeCodeForSecret:(NSString *)accessToken serviceName:(NSString *)serviceName optionsKey:(NSString *)key
+                      withRedirectUri:(NSString *)redirectUri
+{
     //generates random secret (credentialToken)
-    NSString *url = [self _buildOAuthRequestStringWithAccessToken:accessToken serviceName: serviceName];
+    NSString *url = [self _buildOAuthRequestStringWithAccessToken:accessToken serviceName: serviceName redirectUri:redirectUri];
     //callback gives an html page in string. credential token & credential secret are stored in a hidden element
     NSString *callback = [self _makeHTTPRequestAtUrl:url];
     
@@ -531,7 +533,7 @@ double const MeteorClientMaxRetryIncrease = 6;
     }
 }
 
-- (NSString *)_buildOAuthRequestStringWithAccessToken:(NSString *)accessToken serviceName: (NSString *)serviceName
+- (NSString *)_buildOAuthRequestStringWithAccessToken:(NSString *)accessToken serviceName: (NSString *)serviceName redirectUri:(NSString *)redirectUri
 {
     NSString* homeUrl = [[[self ddp] urlString] stringByReplacingOccurrencesOfString:@"/websocket" withString:@""];
     //remove ws/wss and replace with http/https
@@ -549,7 +551,13 @@ double const MeteorClientMaxRetryIncrease = 6;
         tokenType = @"code";
     }
     
-    return [NSString stringWithFormat: @"%@/_oauth/%@?%@=%@&state=%@&installedClient=true", homeUrl, serviceName, tokenType, accessToken, [self _generateStateWithToken: [self _randomSecret]]];
+    NSString *uri = [NSString stringWithFormat: @"%@/_oauth/%@?%@=%@&state=%@&installedClient=true", homeUrl, serviceName, tokenType, accessToken, [self _generateStateWithToken: [self _randomSecret]]];
+    
+    if (redirectUri) {
+        uri = [uri stringByAppendingString:[NSString stringWithFormat:@"&redirectUri=%@", redirectUri]];
+    }
+    
+    return uri;
 }
 
 - (NSDictionary *)_buildUserParametersWithOAuthAccessToken:(NSString *)accessToken
